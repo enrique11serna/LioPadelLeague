@@ -1,8 +1,24 @@
+import os
 from flask_sqlalchemy import SQLAlchemy
+
+# Leer variables de entorno (que has configurado en Render)
+DB_USER = os.environ.get('DB_USER')
+DB_PASSWORD = os.environ.get('DB_PASSWORD')
+DB_HOST = os.environ.get('DB_HOST')
+DB_PORT = os.environ.get('DB_PORT')
+DB_NAME = os.environ.get('DB_NAME')
+
+# Construir URI de conexión a MySQL
+DB_URI = f'mysql+pymysql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}'
 
 db = SQLAlchemy()
 
-from src.models import db
+def init_app(app):
+    app.config['SQLALCHEMY_DATABASE_URI'] = DB_URI
+    app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+    db.init_app(app)
+
+# Importar modelos para que SQLAlchemy los registre
 from src.models.user import User
 from src.models.league import League, LeagueMembership
 from src.models.match import Match, MatchParticipation

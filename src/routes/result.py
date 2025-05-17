@@ -10,7 +10,7 @@ from src.routes.auth import token_required
 result_bp = Blueprint('result', __name__)
 
 # Configuración para subida de archivos
-UPLOAD_FOLDER = os.path.join(current_app.root_path, 'static', 'uploads', 'match_photos')
+UPLOAD_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', 'static', 'uploads', 'match_photos')
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
 
 def allowed_file(filename):

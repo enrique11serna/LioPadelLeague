@@ -12,11 +12,11 @@ from src.routes.match import match_bp
 from src.routes.result import result_bp
 from src.models import initialize_cards
 
-# Crear la app y definir carpeta de archivos estáticos
+# Crear la app y definir carpeta de archivos estáticos y de plantillas
 app = Flask(
     __name__,
     static_folder=os.path.join(os.path.dirname(__file__), 'static'),
-    template_folder=os.path.join(os.path.dirname(__file__), 'templates')
+    template_folder='templates'  # CORREGIDO
 )
 
 # Configuración básica

@@ -161,13 +161,14 @@ const Leagues = {
         }
         
         try {
+            // Mostrar indicador de carga
             const submitBtn = document.getElementById('create-league-submit');
             const originalText = submitBtn.innerHTML;
             submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Creando...';
             submitBtn.disabled = true;
             
             const response = await API.leagues.create({ name: leagueName });
-
+            
             // Restaurar botón
             submitBtn.innerHTML = originalText;
             submitBtn.disabled = false;
@@ -188,8 +189,7 @@ const Leagues = {
             }, 1000);
         } catch (error) {
             console.error('Error creando liga:', error);
-            App.showToast('Error al crear la liga', 'error');
-
+            
             // Restaurar botón si hay error
             const submitBtn = document.getElementById('create-league-submit');
             if (submitBtn.disabled) {
@@ -216,7 +216,17 @@ const Leagues = {
         }
         
         try {
+            // Mostrar indicador de carga
+            const submitBtn = document.getElementById('join-league-submit');
+            const originalText = submitBtn.innerHTML;
+            submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Uniéndose...';
+            submitBtn.disabled = true;
+            
             const response = await API.leagues.join(inviteCode);
+            
+            // Restaurar botón
+            submitBtn.innerHTML = originalText;
+            submitBtn.disabled = false;
             
             // Cerrar modal
             const modal = bootstrap.Modal.getInstance(document.getElementById('joinLeagueModal'));
@@ -234,7 +244,20 @@ const Leagues = {
             }, 1000);
         } catch (error) {
             console.error('Error uniéndose a liga:', error);
-            App.showToast('Código de invitación inválido', 'error');
+            
+            // Restaurar botón si hay error
+            const submitBtn = document.getElementById('join-league-submit');
+            if (submitBtn.disabled) {
+                submitBtn.innerHTML = 'Unirse';
+                submitBtn.disabled = false;
+            }
+            
+            // Mostrar mensaje de error más específico
+            let errorMsg = 'Código de invitación inválido';
+            if (error.message) {
+                errorMsg = error.message;
+            }
+            App.showToast(errorMsg, 'error');
         }
     },
     
@@ -344,6 +367,7 @@ const Leagues = {
         // Configurar modal
         document.getElementById('invite-code-display').value = inviteCode;
         
+        // Usar window.location.protocol para asegurar el mismo protocolo
         const baseUrl = `${window.location.protocol}//${window.location.host}`;
         const inviteLink = `${baseUrl}/join/${inviteCode}`;
         document.getElementById('invite-link-display').value = inviteLink;
@@ -381,13 +405,14 @@ const Leagues = {
             return;
         }
         
-        const baseUrl = window.location.origin;
+        // Usar window.location.protocol para asegurar el mismo protocolo
+        const baseUrl = `${window.location.protocol}//${window.location.host}`;
         const inviteLink = `${baseUrl}/join/${inviteCode}`;
         
         const message = encodeURIComponent(`¡Únete a mi liga de pádel "${leagueName}" en Lio Padel League! Usa este enlace: ${inviteLink}`);
         const whatsappUrl = `https://wa.me/?text=${message}`;
         
-        window.open(whatsappUrl, '_blank');
+        window.open(whatsappUrl, '_blank' );
     },
     
     // Utilidades

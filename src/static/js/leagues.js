@@ -161,7 +161,16 @@ const Leagues = {
         }
         
         try {
+            const submitBtn = document.getElementById('create-league-submit');
+            const originalText = submitBtn.innerHTML;
+            submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Creando...';
+            submitBtn.disabled = true;
+            
             const response = await API.leagues.create({ name: leagueName });
+
+            // Restaurar botón
+            submitBtn.innerHTML = originalText;
+            submitBtn.disabled = false;
             
             // Cerrar modal
             const modal = bootstrap.Modal.getInstance(document.getElementById('createLeagueModal'));
@@ -180,6 +189,20 @@ const Leagues = {
         } catch (error) {
             console.error('Error creando liga:', error);
             App.showToast('Error al crear la liga', 'error');
+
+            // Restaurar botón si hay error
+            const submitBtn = document.getElementById('create-league-submit');
+            if (submitBtn.disabled) {
+                submitBtn.innerHTML = 'Crear Liga';
+                submitBtn.disabled = false;
+            }
+            
+            // Mostrar mensaje de error más específico
+            let errorMsg = 'Error al crear la liga';
+            if (error.message) {
+                errorMsg += `: ${error.message}`;
+            }
+            App.showToast(errorMsg, 'error');
         }
     },
     
@@ -321,7 +344,7 @@ const Leagues = {
         // Configurar modal
         document.getElementById('invite-code-display').value = inviteCode;
         
-        const baseUrl = window.location.origin;
+        const baseUrl = `${window.location.protocol}//${window.location.host}`;
         const inviteLink = `${baseUrl}/join/${inviteCode}`;
         document.getElementById('invite-link-display').value = inviteLink;
         

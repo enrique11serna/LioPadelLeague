@@ -4,7 +4,7 @@ import sys
 # Asegurar que se puede importar desde src/
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
-from flask import Flask, send_from_directory, render_template
+from flask import Flask, send_from_directory, render_template, request, redirect
 from src.models import db
 from src.routes.auth import auth_bp
 from src.routes.league import league_bp
@@ -23,6 +23,14 @@ app = Flask(
 app.config['SECRET_KEY'] = 'asdf#FGSgvasgf$5$WGT'
 app.config['SQLALCHEMY_DATABASE_URI'] = f"mysql+pymysql://{os.getenv('DB_USERNAME', 'root')}:{os.getenv('DB_PASSWORD', 'password')}@{os.getenv('DB_HOST', 'localhost')}:{os.getenv('DB_PORT', '3306')}/{os.getenv('DB_NAME', 'mydb')}"
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+# Middleware para forzar HTTPS
+@app.before_request
+def force_https( ):
+    # Verificar si estamos en producción (Render)
+    if os.environ.get('RENDER', False) and request.headers.get('X-Forwarded-Proto') == 'http':
+        url = request.url.replace('http://', 'https://', 1 )
+        return redirect(url, code=301)
 
 # Inicializar DB y cartas
 db.init_app(app)

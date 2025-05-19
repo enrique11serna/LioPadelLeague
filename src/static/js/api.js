@@ -56,13 +56,15 @@ const API = {
                 body: JSON.stringify(data)
             });
             
+            const responseData = await response.json();
+            
             if (!response.ok) {
-                throw new Error(`Error ${response.status}: ${response.statusText}`);
+                throw new Error(responseData.message || `Error ${response.status}: ${response.statusText}`);
             }
             
-            return await response.json();
+            return responseData;
         } catch (error) {
-            console.error('API POST Error:', error);
+            console.error('API POST Error:', error.message);
             throw error;
         }
     },

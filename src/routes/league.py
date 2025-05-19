@@ -24,8 +24,13 @@ def create_league(current_user):
         created_by_id=current_user.id
     )
     
-    db.session.add(new_league)
-    db.session.commit()
+    try:
+        db.session.add(new_league)
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'message': f'Error al crear la liga: {str(e)}'}), 500
+
     
     # Añadir al creador como miembro de la liga
     membership = LeagueMembership(

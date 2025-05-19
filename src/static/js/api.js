@@ -2,7 +2,7 @@
 
 const API = {
     // URL base para las peticiones API
-    baseUrl: 'https://liopadelleague.onrender.com/api',
+    baseUrl: window.location.protocol + '//' + window.location.host + '/api',
     
     // Obtener token de autenticación del almacenamiento local
     getToken() {

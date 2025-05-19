@@ -31,13 +31,15 @@ const API = {
     // Petición GET
     async get(endpoint) {
         try {
+            console.log(`Realizando GET a: ${this.baseUrl}${endpoint}`);
             const response = await fetch(`${this.baseUrl}${endpoint}`, {
                 method: 'GET',
                 headers: this.getAuthHeaders()
             });
             
             if (!response.ok) {
-                throw new Error(`Error ${response.status}: ${response.statusText}`);
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(errorData.message || `Error ${response.status}: ${response.statusText}`);
             }
             
             return await response.json();
@@ -50,13 +52,14 @@ const API = {
     // Petición POST
     async post(endpoint, data) {
         try {
+            console.log(`Realizando POST a: ${this.baseUrl}${endpoint}`, data);
             const response = await fetch(`${this.baseUrl}${endpoint}`, {
                 method: 'POST',
                 headers: this.getAuthHeaders(),
                 body: JSON.stringify(data)
             });
             
-            const responseData = await response.json();
+            const responseData = await response.json().catch(() => ({}));
             
             if (!response.ok) {
                 throw new Error(responseData.message || `Error ${response.status}: ${response.statusText}`);
@@ -72,6 +75,7 @@ const API = {
     // Petición PUT
     async put(endpoint, data) {
         try {
+            console.log(`Realizando PUT a: ${this.baseUrl}${endpoint}`, data);
             const response = await fetch(`${this.baseUrl}${endpoint}`, {
                 method: 'PUT',
                 headers: this.getAuthHeaders(),
@@ -79,7 +83,8 @@ const API = {
             });
             
             if (!response.ok) {
-                throw new Error(`Error ${response.status}: ${response.statusText}`);
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(errorData.message || `Error ${response.status}: ${response.statusText}`);
             }
             
             return await response.json();
@@ -92,6 +97,7 @@ const API = {
     // Subir archivo
     async uploadFile(endpoint, formData) {
         try {
+            console.log(`Realizando upload a: ${this.baseUrl}${endpoint}`);
             const token = this.getToken();
             const headers = {
                 'Authorization': token ? `Bearer ${token}` : ''
@@ -105,7 +111,8 @@ const API = {
             });
             
             if (!response.ok) {
-                throw new Error(`Error ${response.status}: ${response.statusText}`);
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(errorData.message || `Error ${response.status}: ${response.statusText}`);
             }
             
             return await response.json();

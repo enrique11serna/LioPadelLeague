@@ -1,5 +1,10 @@
 import os
 import sys
+import logging
+
+# Configurar logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 # Asegurar que se puede importar desde src/
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
@@ -23,18 +28,31 @@ app = Flask(
     template_folder=os.path.join(BASE_DIR, 'src', 'templates')
 )
 
-CORS(app)
+# Configurar CORS con más detalle
+CORS(app, resources={r"/api/*": {"origins": "*"}}, supports_credentials=True)
 
 # Configuración básica
 app.config['SECRET_KEY'] = 'asdf#FGSgvasgf$5$WGT'
 app.config['SQLALCHEMY_DATABASE_URI'] = f"mysql+pymysql://{os.getenv('DB_USERNAME', 'root')}:{os.getenv('DB_PASSWORD', 'password')}@{os.getenv('DB_HOST', 'localhost')}:{os.getenv('DB_PORT', '3306')}/{os.getenv('DB_NAME', 'mydb')}"
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
+# Logging para depuración
+@app.before_request
+def log_request_info():
+    if request.path.startswith('/api'):
+        logger.info('Headers: %s', dict(request.headers))
+        logger.info('Path: %s', request.path)
+        logger.info('Method: %s', request.method)
+        if request.is_json:
+            logger.info('JSON Body: %s', request.json)
+
 # Forzar HTTPS en producción
 @app.before_request
-def force_https():
+def force_https( ):
+    # Verificar si estamos en Render y la petición es HTTP
     if os.environ.get('RENDER', False) and request.headers.get('X-Forwarded-Proto') == 'http':
-        url = request.url.replace('http://', 'https://', 1)
+        url = request.url.replace('http://', 'https://', 1 )
+        logger.info('Redirecting to HTTPS: %s', url)
         return redirect(url, code=301)
 
 # Inicializar DB

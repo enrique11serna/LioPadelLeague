@@ -13,12 +13,16 @@ from src.routes.match import match_bp
 from src.routes.result import result_bp
 from src.models import initialize_cards
 
-# Crear la app y definir carpeta de archivos estáticos y de plantillas
+# Ruta absoluta al directorio base del proyecto (LioPadelLeague-main/)
+BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+
+# Crear app correctamente configurando static y templates desde BASE_DIR
 app = Flask(
     __name__,
-    static_folder=os.path.join(os.path.dirname(__file__), 'static'),
-    template_folder='templates'  # CORREGIDO
+    static_folder=os.path.join(BASE_DIR, 'src', 'static'),
+    template_folder=os.path.join(BASE_DIR, 'src', 'templates')
 )
+
 CORS(app)
 
 # Configuración básica
@@ -26,35 +30,33 @@ app.config['SECRET_KEY'] = 'asdf#FGSgvasgf$5$WGT'
 app.config['SQLALCHEMY_DATABASE_URI'] = f"mysql+pymysql://{os.getenv('DB_USERNAME', 'root')}:{os.getenv('DB_PASSWORD', 'password')}@{os.getenv('DB_HOST', 'localhost')}:{os.getenv('DB_PORT', '3306')}/{os.getenv('DB_NAME', 'mydb')}"
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
-# Middleware para forzar HTTPS
+# Forzar HTTPS en producción
 @app.before_request
-def force_https( ):
-    # Verificar si estamos en producción (Render)
+def force_https():
     if os.environ.get('RENDER', False) and request.headers.get('X-Forwarded-Proto') == 'http':
-        url = request.url.replace('http://', 'https://', 1 )
+        url = request.url.replace('http://', 'https://', 1)
         return redirect(url, code=301)
 
-# Inicializar DB y cartas
+# Inicializar DB
 db.init_app(app)
 with app.app_context():
     db.create_all()
     initialize_cards()
 
-# Registrar blueprints
+# Registrar rutas (blueprints)
 app.register_blueprint(auth_bp, url_prefix='/api/auth')
 app.register_blueprint(league_bp, url_prefix='/api/leagues')
 app.register_blueprint(match_bp, url_prefix='/api')
 app.register_blueprint(result_bp, url_prefix='/api')
 
-# Ruta para servir frontend desde templates/index.html
+# Ruta principal y archivos estáticos
 @app.route('/', defaults={'path': ''})
 @app.route('/<path:path>')
 def serve(path):
     if path == '' or not '.' in path:
         return render_template('index.html')
-    else:
-        return send_from_directory(app.static_folder, path)
+    return send_from_directory(app.static_folder, path)
 
-# Ejecutar la app
+# Lanzar servidor
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    app.run(host='0.0.0.0', port=5000)

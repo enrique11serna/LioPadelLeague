@@ -5,6 +5,7 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
 from flask import Flask, send_from_directory, render_template, request, redirect
+from flask_cors import CORS
 from src.models import db
 from src.routes.auth import auth_bp
 from src.routes.league import league_bp
@@ -18,6 +19,7 @@ app = Flask(
     static_folder=os.path.join(os.path.dirname(__file__), 'static'),
     template_folder='templates'  # CORREGIDO
 )
+CORS(app)
 
 # Configuración básica
 app.config['SECRET_KEY'] = 'asdf#FGSgvasgf$5$WGT'

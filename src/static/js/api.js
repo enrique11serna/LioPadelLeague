@@ -2,7 +2,7 @@
 
 const API = {
     // URL base para las peticiones API - siempre con HTTPS
-    baseUrl: 'https://' + window.location.hostname + '/api',
+    baseUrl: `${window.location.origin}/api`,
 
     // Obtener token de autenticación del almacenamiento local
     getToken() {

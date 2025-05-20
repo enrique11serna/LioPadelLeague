@@ -1,7 +1,7 @@
 // API Service para comunicación con el backend
 
 const API = {
-    // URL base para las peticiones API - siempre con HTTPS
+    // URL base para las peticiones API - siempre con HTTPS y host dinámico
     baseUrl: `${window.location.origin}/api`,
 
     // Obtener token de autenticación del almacenamiento local
@@ -30,19 +30,17 @@ const API = {
 
     // Petición GET
     async get(endpoint) {
+        console.log(`Realizando GET a: ${this.baseUrl}${endpoint}`);
         try {
-            console.log(`Realizando GET a: ${this.baseUrl}${endpoint}`);
             const response = await fetch(`${this.baseUrl}${endpoint}`, {
                 method: 'GET',
                 headers: this.getAuthHeaders()
             });
-
+            const data = await response.json().catch(() => ({}));
             if (!response.ok) {
-                const errorData = await response.json().catch(() => ({}));
-                throw new Error(errorData.message || `Error ${response.status}: ${response.statusText}`);
+                throw new Error(data.message || `Error ${response.status}: ${response.statusText}`);
             }
-
-            return await response.json();
+            return data;
         } catch (error) {
             console.error('API GET Error:', error);
             throw error;
@@ -50,22 +48,19 @@ const API = {
     },
 
     // Petición POST
-    async post(endpoint, data) {
+    async post(endpoint, payload) {
+        console.log(`Realizando POST a: ${this.baseUrl}${endpoint}`, payload);
         try {
-            console.log(`Realizando POST a: ${this.baseUrl}${endpoint}`, data);
             const response = await fetch(`${this.baseUrl}${endpoint}`, {
                 method: 'POST',
                 headers: this.getAuthHeaders(),
-                body: JSON.stringify(data)
+                body: JSON.stringify(payload)
             });
-
-            const responseData = await response.json().catch(() => ({}));
-
+            const data = await response.json().catch(() => ({}));
             if (!response.ok) {
-                throw new Error(responseData.message || `Error ${response.status}: ${response.statusText}`);
+                throw new Error(data.message || `Error ${response.status}: ${response.statusText}`);
             }
-
-            return responseData;
+            return data;
         } catch (error) {
             console.error('API POST Error:', error.message);
             throw error;
@@ -73,49 +68,41 @@ const API = {
     },
 
     // Petición PUT
-    async put(endpoint, data) {
+    async put(endpoint, payload) {
+        console.log(`Realizando PUT a: ${this.baseUrl}${endpoint}`, payload);
         try {
-            console.log(`Realizando PUT a: ${this.baseUrl}${endpoint}`, data);
             const response = await fetch(`${this.baseUrl}${endpoint}`, {
                 method: 'PUT',
                 headers: this.getAuthHeaders(),
-                body: JSON.stringify(data)
+                body: JSON.stringify(payload)
             });
-
+            const data = await response.json().catch(() => ({}));
             if (!response.ok) {
-                const errorData = await response.json().catch(() => ({}));
-                throw new Error(errorData.message || `Error ${response.status}: ${response.statusText}`);
+                throw new Error(data.message || `Error ${response.status}: ${response.statusText}`);
             }
-
-            return await response.json();
+            return data;
         } catch (error) {
             console.error('API PUT Error:', error);
             throw error;
         }
     },
 
-    // Subir archivo
+    // Subir archivo (formData)
     async uploadFile(endpoint, formData) {
+        console.log(`Realizando upload a: ${this.baseUrl}${endpoint}`);
         try {
-            console.log(`Realizando upload a: ${this.baseUrl}${endpoint}`);
-            const token = this.getToken();
-            const headers = {
-                'Authorization': token ? `Bearer ${token}` : ''
-                // No incluir Content-Type para multipart/form-data
-            };
-
             const response = await fetch(`${this.baseUrl}${endpoint}`, {
                 method: 'POST',
-                headers: headers,
+                headers: {
+                    'Authorization': this.getToken() ? `Bearer ${this.getToken()}` : ''
+                },
                 body: formData
             });
-
+            const data = await response.json().catch(() => ({}));
             if (!response.ok) {
-                const errorData = await response.json().catch(() => ({}));
-                throw new Error(errorData.message || `Error ${response.status}: ${response.statusText}`);
+                throw new Error(data.message || `Error ${response.status}: ${response.statusText}`);
             }
-
-            return await response.json();
+            return data;
         } catch (error) {
             console.error('API Upload Error:', error);
             throw error;
@@ -124,36 +111,36 @@ const API = {
 
     // Endpoints específicos
     auth: {
-        login: (credentials) => API.post('/auth/login', credentials),
-        register: (userData) => API.post('/auth/register', userData),
+        login: creds => API.post('/auth/login', creds),
+        register: user => API.post('/auth/register', user),
         validateToken: () => API.get('/auth/validate-token'),
         getProfile: () => API.get('/auth/profile'),
-        updateProfile: (userData) => API.put('/auth/profile', userData)
+        updateProfile: user => API.put('/auth/profile', user)
     },
 
     leagues: {
         getAll: () => API.get('/leagues'),
-        getById: (id) => API.get(`/leagues/${id}`),
-        create: (leagueData) => API.post('/leagues', leagueData),
-        join: (inviteCode) => API.post(`/leagues/join/${inviteCode}`),
-        update: (id, leagueData) => API.put(`/leagues/${id}`, leagueData),
-        regenerateInvite: (id) => API.post(`/leagues/${id}/regenerate-invite`)
+        getById: id => API.get(`/leagues/${id}`),
+        create: data => API.post('/leagues', data),
+        join: code => API.post(`/leagues/join/${code}`),
+        update: (id, data) => API.put(`/leagues/${id}`, data),
+        regenerateInvite: id => API.post(`/leagues/${id}/regenerate-invite`)
     },
 
     matches: {
-        getByLeague: (leagueId) => API.get(`/leagues/${leagueId}/matches`),
-        getById: (id) => API.get(`/matches/${id}`),
-        create: (leagueId, matchData) => API.post(`/leagues/${leagueId}/matches`, matchData),
-        join: (id, teamData) => API.post(`/matches/${id}/join`, teamData),
-        leave: (id) => API.post(`/matches/${id}/leave`),
-        useCard: (id) => API.post(`/matches/${id}/use-card`),
-        submitResult: (id, resultData) => API.post(`/matches/${id}/result`, resultData),
-        submitRatings: (id, ratingsData) => API.post(`/matches/${id}/ratings`, ratingsData),
-        getPhotos: (id) => API.get(`/matches/${id}/photos`),
-        uploadPhoto: (id, formData) => API.uploadFile(`/matches/${id}/photos`, formData)
+        getByLeague: lid => API.get(`/leagues/${lid}/matches`),
+        getById: id => API.get(`/matches/${id}`),
+        create: (lid, data) => API.post(`/leagues/${lid}/matches`, data),
+        join: (id, team) => API.post(`/matches/${id}/join`, team),
+        leave: id => API.post(`/matches/${id}/leave`),
+        useCard: id => API.post(`/matches/${id}/use-card`),
+        submitResult: (id, res) => API.post(`/matches/${id}/result`, res),
+        submitRatings: (id, rates) => API.post(`/matches/${id}/ratings`, rates),
+        getPhotos: id => API.get(`/matches/${id}/photos`),
+        uploadPhoto: (id, fd) => API.uploadFile(`/matches/${id}/photos`, fd)
     },
 
     users: {
-        getStats: (id) => API.get(`/users/${id}/stats`)
+        getStats: id => API.get(`/users/${id}/stats`)
     }
 };

@@ -37,3 +37,23 @@ def delete_user(user_id):
     db.session.delete(user)
     db.session.commit()
     return '', 204
+
+@user_bp.route('/users/<int:user_id>/stats', methods=['GET'])
+def get_user_stats(user_id):
+    from src.models.match import MatchParticipation
+    from src.models.rating import PlayerRating
+    from sqlalchemy import func
+
+    total_matches = MatchParticipation.query.filter_by(user_id=user_id).count()
+    matches_won = MatchParticipation.query.filter_by(user_id=user_id, result='win').count()
+    win_rate = (matches_won / total_matches * 100) if total_matches else 0
+
+    avg_rating = db.session.query(func.avg(PlayerRating.rating)).filter_by(rated_id=user_id).scalar() or 0.0
+
+    return jsonify({
+        "total_matches": total_matches,
+        "matches_won": matches_won,
+        "win_rate": round(win_rate, 2),
+        "avg_rating": round(avg_rating, 1)
+    }), 200
+

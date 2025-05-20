@@ -3,7 +3,21 @@ services:
     name: lio-padel-league
     env: python
     buildCommand: ""
-    startCommand: "python src/main.py"
+    startCommand: "gunicorn src.main:app --bind 0.0.0.0:$PORT"
     envVars:
       - key: FLASK_ENV
         value: production
+      - key: RENDER
+        value: "true"
+      - key: SECRET_KEY
+        fromDatabase: true  # opcional: si lo guardas en Render
+      - key: DB_USERNAME
+        fromDatabase: true
+      - key: DB_PASSWORD
+        fromDatabase: true
+      - key: DB_HOST
+        fromDatabase: true
+      - key: DB_PORT
+        fromDatabase: true
+      - key: DB_NAME
+        fromDatabase: true

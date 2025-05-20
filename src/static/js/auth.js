@@ -1,175 +1,120 @@
 // Módulo de autenticación
-
-// Estado global de autenticación
-let currentUser = null;
-
 const Auth = {
-    // Inicializar módulo de autenticación
+    currentUser: null,
+
     init() {
         this.bindEvents();
         this.checkAuthStatus();
     },
-    
-    // Vincular eventos de formularios
+
     bindEvents() {
-        // Formulario de login
+        // Login
         const loginForm = document.getElementById('login-form');
         if (loginForm) {
-            loginForm.addEventListener('submit', (e) => {
+            loginForm.addEventListener('submit', e => {
                 e.preventDefault();
                 this.login();
             });
         }
-        
-        // Formulario de registro
+        // Register
         const registerForm = document.getElementById('register-form');
         if (registerForm) {
-            registerForm.addEventListener('submit', (e) => {
+            registerForm.addEventListener('submit', e => {
                 e.preventDefault();
                 this.register();
             });
         }
-        
-        // Botón de logout
-        document.addEventListener('click', (e) => {
+        // Logout
+        document.addEventListener('click', e => {
             if (e.target.id === 'nav-logout') {
                 e.preventDefault();
                 this.logout();
             }
         });
     },
-    
-    // Verificar estado de autenticación al cargar la página
+
+    // Verifica token y coge perfil
     async checkAuthStatus() {
         const token = API.getToken();
-        
         if (!token) {
-            this.showLoginPage();
-            return;
+            return this.showLoginPage();
         }
-        
         try {
-            const response = await API.auth.validateToken();
-            if (response.valid) {
-                currentUser = response.user;
-                App.showHomePage();
-            } else {
-                this.logout();
-            }
-        } catch (error) {
-            console.error('Error validando token:', error);
+            await API.auth.validateToken();
+            // si no arroja, el token es válido → cargamos perfil
+            const profile = await API.auth.getProfile();
+            this.currentUser = profile;
+            App.showHomePage();
+        } catch (err) {
+            console.warn('Token inválido o expirado:', err);
             this.logout();
         }
     },
-    
-    // Mostrar página de login/registro
+
+    // Muestra la vista de login/registro
     showLoginPage() {
-        const appContainer = document.getElementById('app');
-        const authTemplate = document.getElementById('auth-template');
-        
-        appContainer.innerHTML = authTemplate.innerHTML;
-        
-        // Vincular eventos después de cargar el template
+        const container = document.getElementById('app');
+        container.innerHTML = document.getElementById('auth-template').innerHTML;
         this.bindEvents();
     },
-    
-    // Proceso de login
+
+    // Login real
     async login() {
-        const email = document.getElementById('login-email').value;
+        const email = document.getElementById('login-email').value.trim();
         const password = document.getElementById('login-password').value;
-        
         if (!email || !password) {
-            this.showAuthMessage('Por favor, completa todos los campos', 'error');
-            return;
+            return this.showAuthMessage('Completa todos los campos', 'warning');
         }
-        
         try {
-            const response = await API.auth.login({ email, password });
-            
-            if (response.token) {
-                API.setToken(response.token);
-                currentUser = response.user;
-                this.showAuthMessage('Inicio de sesión exitoso', 'success');
-                
-                // Redirigir a la página principal
-                setTimeout(() => {
-                    App.showHomePage();
-                }, 1000);
-            }
-        } catch (error) {
-            console.error('Error de login:', error);
-            this.showAuthMessage('Credenciales inválidas', 'error');
+            const { token } = await API.auth.login({ email, password });
+            API.setToken(token);
+            this.showAuthMessage('Inicio exitoso', 'success');
+            // recarga estado para cargar ligas, perfil, etc.
+            setTimeout(() => this.checkAuthStatus(), 500);
+        } catch (err) {
+            console.error('Error de login:', err);
+            this.showAuthMessage(err.message || 'Credenciales inválidas', 'danger');
         }
     },
-    
-    // Proceso de registro
+
+    // Registro
     async register() {
-        const username = document.getElementById('register-username').value;
-        const email = document.getElementById('register-email').value;
-        const password = document.getElementById('register-password').value;
-        const confirmPassword = document.getElementById('register-confirm-password').value;
-        
-        if (!username || !email || !password || !confirmPassword) {
-            this.showAuthMessage('Por favor, completa todos los campos', 'error');
-            return;
+        const u = document.getElementById('register-username').value.trim();
+        const e = document.getElementById('register-email').value.trim();
+        const p = document.getElementById('register-password').value;
+        const c = document.getElementById('register-confirm-password').value;
+        if (!u || !e || !p || !c) {
+            return this.showAuthMessage('Completa todos los campos', 'warning');
         }
-        
-        if (password !== confirmPassword) {
-            this.showAuthMessage('Las contraseñas no coinciden', 'error');
-            return;
+        if (p !== c) {
+            return this.showAuthMessage('Las contraseñas no coinciden', 'warning');
         }
-        
         try {
-            const response = await API.auth.register({ username, email, password });
-            
-            if (response.message) {
-                this.showAuthMessage('Registro exitoso. Ahora puedes iniciar sesión', 'success');
-                
-                // Cambiar a la pestaña de login
-                const loginTab = document.getElementById('login-tab');
-                if (loginTab) {
-                    const tabInstance = new bootstrap.Tab(loginTab);
-                    tabInstance.show();
-                }
-                
-                // Limpiar formulario
-                document.getElementById('register-form').reset();
-            }
-        } catch (error) {
-            console.error('Error de registro:', error);
-            this.showAuthMessage('Error al registrar usuario. El email o nombre de usuario ya existe', 'error');
+            await API.auth.register({ username: u, email: e, password: p });
+            this.showAuthMessage('Registro exitoso. Inicia sesión.', 'success');
+            document.getElementById('login-tab').click();
+        } catch (err) {
+            console.error('Error de registro:', err);
+            this.showAuthMessage(err.message || 'Error al registrar', 'danger');
         }
     },
-    
-    // Cerrar sesión
+
+    // Logout completo
     logout() {
         API.removeToken();
-        currentUser = null;
+        this.currentUser = null;
         this.showLoginPage();
     },
-    
-    // Mostrar mensaje en la página de autenticación
-    showAuthMessage(message, type = 'info') {
-        const messageElement = document.getElementById('auth-message');
-        if (messageElement) {
-            messageElement.textContent = message;
-            messageElement.className = `small ${type}`;
-            
-            // Limpiar mensaje después de 5 segundos
-            setTimeout(() => {
-                messageElement.textContent = '';
-                messageElement.className = 'small';
-            }, 5000);
-        }
-    },
-    
-    // Obtener usuario actual
-    getCurrentUser() {
-        return currentUser;
-    },
-    
-    // Actualizar datos del usuario actual
-    setCurrentUser(user) {
-        currentUser = user;
+
+    // Mensajes en auth
+    showAuthMessage(msg, type = 'info') {
+        const el = document.getElementById('auth-message');
+        if (!el) return;
+        el.textContent = msg;
+        el.className = `small text-${type}`;
+        setTimeout(() => {
+            el.textContent = '';
+            el.className = 'small';
+        }, 5000);
     }
 };

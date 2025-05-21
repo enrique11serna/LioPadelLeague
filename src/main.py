@@ -9,7 +9,6 @@ from flask_cors import CORS
 
 from src.models import db, initialize_cards
 from src.routes.auth import auth_bp
-from src.routes.user import user_bp
 from src.routes.league import league_bp
 from src.routes.match import match_bp
 from src.routes.result import result_bp
@@ -55,7 +54,6 @@ with app.app_context():
 
 # Registrar blueprints
 app.register_blueprint(auth_bp,    url_prefix='/api/auth')
-app.register_blueprint(user_bp,    url_prefix='/api/users')
 app.register_blueprint(league_bp,  url_prefix='/api/leagues')
 app.register_blueprint(match_bp,   url_prefix='/api/matches')
 app.register_blueprint(result_bp,  url_prefix='/api/results')

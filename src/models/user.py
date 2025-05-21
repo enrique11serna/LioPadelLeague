@@ -2,7 +2,8 @@ from datetime import datetime
 from werkzeug.security import generate_password_hash, check_password_hash
 from src.models import db
 from src.models.match import MatchParticipation
-from src.models.result import Rating
+from src.models.rating import PlayerRating  # <-- corregido
+
 
 class User(db.Model):
     __tablename__ = 'users'
@@ -22,10 +23,16 @@ class User(db.Model):
         'MatchParticipation', back_populates='user', cascade='all, delete-orphan'
     )
     ratings_given = db.relationship(
-        'Rating', back_populates='reviewer', foreign_keys='Rating.reviewer_id', cascade='all, delete-orphan'
+        'PlayerRating',
+        back_populates='rater',
+        foreign_keys='PlayerRating.rater_id',
+        cascade='all, delete-orphan'
     )
     ratings_received = db.relationship(
-        'Rating', back_populates='reviewee', foreign_keys='Rating.reviewee_id', cascade='all, delete-orphan'
+        'PlayerRating',
+        back_populates='rated',
+        foreign_keys='PlayerRating.rated_id',
+        cascade='all, delete-orphan'
     )
     
     def set_password(self, password):

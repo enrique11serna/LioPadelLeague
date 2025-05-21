@@ -2,23 +2,35 @@ services:
   - type: web
     name: lio-padel-league
     env: python
-    # Deja buildCommand vacío para que Render use el pip por defecto
-    buildCommand: ""
+    # Explicitamos la instalación de dependencias
+    buildCommand: "pip install --upgrade pip && pip install -r requirements.txt"
+    # Arranque con Gunicorn
     startCommand: "gunicorn src.main:app --bind 0.0.0.0:$PORT"
     envVars:
-      - key: FLASK_ENV
-        value: production
-      - key: RENDER
-        value: "true"
+      # Clave secreta para Flask (ya configurada en tu database de Render)
       - key: SECRET_KEY
         fromDatabase: true
-      - key: DB_USER
-        fromDatabase: true
-      - key: DB_PASSWORD
-        fromDatabase: true
+
+      # Conexión a tu base de datos Railway
       - key: DB_HOST
-        fromDatabase: true
-      - key: DB_PORT
-        fromDatabase: true
+        value: caboose.proxy.rlwy.net
       - key: DB_NAME
-        fromDatabase: true
+        value: railway
+      - key: DB_USER
+        value: root
+      - key: DB_PASSWORD
+        value: RcPsbNGweoMFmAVEfrZhNZYmBCQIZiEN
+      - key: DB_PORT
+        value: "19305"
+
+      # Entorno de Flask
+      - key: FLASK_ENV
+        value: production
+      - key: FLASK_APP
+        value: src/main.py
+      - key: FLASK_DEBUG
+        value: "false"
+
+      # Flag interno para detectar despliegue en Render
+      - key: RENDER
+        value: "true"

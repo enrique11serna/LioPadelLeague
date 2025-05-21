@@ -6,12 +6,14 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
 from flask import Flask, send_from_directory, render_template, request, redirect
 from flask_cors import CORS
+
 from src.models import db, initialize_cards
 from src.routes.auth import auth_bp
 from src.routes.user import user_bp
 from src.routes.league import league_bp
 from src.routes.match import match_bp
 from src.routes.result import result_bp
+from src.routes.profile import profile_bp
 
 # Crear la aplicación
 app = Flask(
@@ -51,12 +53,13 @@ with app.app_context():
     db.create_all()
     initialize_cards()
 
-# Registrar blueprints (prefijos REST claros)
+# Registrar blueprints
 app.register_blueprint(auth_bp,    url_prefix='/api/auth')
 app.register_blueprint(user_bp,    url_prefix='/api/users')
 app.register_blueprint(league_bp,  url_prefix='/api/leagues')
 app.register_blueprint(match_bp,   url_prefix='/api/matches')
 app.register_blueprint(result_bp,  url_prefix='/api/results')
+app.register_blueprint(profile_bp, url_prefix='/api/profile')
 
 # Servir la SPA y sus assets
 @app.route('/', defaults={'path': ''})

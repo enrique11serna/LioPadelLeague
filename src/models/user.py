@@ -1,6 +1,8 @@
 from datetime import datetime
 from werkzeug.security import generate_password_hash, check_password_hash
 from src.models import db
+from src.models.match import MatchParticipation
+from src.models.result import Rating
 
 class User(db.Model):
     __tablename__ = 'users'
@@ -13,10 +15,18 @@ class User(db.Model):
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
     # Relaciones
-    league_memberships = db.relationship('LeagueMembership', back_populates='user', cascade='all, delete-orphan')
-    match_participations = db.relationship('MatchParticipation', back_populates='user', cascade='all, delete-orphan')
-    ratings_given = db.relationship('PlayerRating', foreign_keys='PlayerRating.rater_id', back_populates='rater', cascade='all, delete-orphan')
-    ratings_received = db.relationship('PlayerRating', foreign_keys='PlayerRating.rated_id', back_populates='rated', cascade='all, delete-orphan')
+    league_memberships = db.relationship(
+        'LeagueMembership', back_populates='user', cascade='all, delete-orphan'
+    )
+    match_participations = db.relationship(
+        'MatchParticipation', back_populates='user', cascade='all, delete-orphan'
+    )
+    ratings_given = db.relationship(
+        'Rating', back_populates='reviewer', foreign_keys='Rating.reviewer_id', cascade='all, delete-orphan'
+    )
+    ratings_received = db.relationship(
+        'Rating', back_populates='reviewee', foreign_keys='Rating.reviewee_id', cascade='all, delete-orphan'
+    )
     
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
@@ -29,5 +39,11 @@ class User(db.Model):
             'id': self.id,
             'username': self.username,
             'email': self.email,
-            'created_at': self.created_at.isoformat() if self.created_at else None
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'leagues': [lm.league_id for lm in self.league_memberships],
+            'stats': {
+                'total_matches': len(self.match_participations),
+                'ratings_given': len(self.ratings_given),
+                'ratings_received': len(self.ratings_received)
+            }
         }

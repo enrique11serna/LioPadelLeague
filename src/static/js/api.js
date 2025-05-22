@@ -1,6 +1,6 @@
 (function (window) {
   const API = {
-    baseUrl: `${window.location.origin}/api`,
+    baseUrl: '/api',
 
     get(path) {
       return fetch(`${this.baseUrl}${path}`, {
@@ -35,6 +35,7 @@
         body: formData
       }).then(this.handleResponse);
     },
+
     handleResponse(res) {
       return res.json().then(data => {
         if (!res.ok) return Promise.reject(data);

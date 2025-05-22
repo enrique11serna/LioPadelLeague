@@ -4,7 +4,7 @@ from src.models import db
 from src.models.league import League, LeagueMembership
 from src.routes.auth import token_required
 
-league_bp = Blueprint('league', __name__)
+league_bp = Blueprint('league', __name__, url_prefix='/api/leagues')
 
 @league_bp.route('/', methods=['GET'])
 @token_required
@@ -19,38 +19,40 @@ def list_leagues():
 def get_league(league_id):
     """Obtener detalles de una liga específica, incluyendo partidos."""
     user = g.current_user
-    membership = LeagueMembership.query.filter_by(league_id=league_id, user_id=user.id).first()
+    membership = LeagueMembership.query.filter_by(
+        league_id=league_id, user_id=user.id
+    ).first()
     if not membership:
         return jsonify({'success': False, 'message': 'No tienes acceso a esta liga'}), 403
+
     league = membership.league
     data = league.to_dict()
-    # Añadir partidos en la respuesta
     data['matches'] = [m.to_dict() for m in league.matches]
     return jsonify({'success': True, 'data': data}), 200
 
 @league_bp.route('/', methods=['POST'])
 @token_required
 def create_league():
-    """Crear una nueva liga privada y generar enlace de invitación."""
+    """Crear una nueva liga y generar enlace de invitación."""
     user = g.current_user
     data = request.get_json() or {}
     name = data.get('name', '').strip()
     if not name:
         return jsonify({'success': False, 'message': 'Nombre de liga requerido'}), 400
 
-    # Crear liga
+    # Generar código y crear la liga (YA NO pasamos is_private)
     invite_code = League.generate_invite_code()
     league = League(name=name, invite_code=invite_code)
-    league.created_by_id = user.id if hasattr(league, 'created_by_id') else None
+    league.created_by_id = user.id
     db.session.add(league)
     db.session.commit()
 
-    # Unir al creador a la liga
+    # Unir al creador
     membership = LeagueMembership(user_id=user.id, league_id=league.id)
     db.session.add(membership)
     db.session.commit()
 
-    invite_link = f"{request.host_url.rstrip('/api/') }/join/{invite_code}"
+    invite_link = f"{request.host_url.rstrip('/api/')}/join/{invite_code}"
     return jsonify({
         'success': True,
         'data': {
@@ -74,7 +76,6 @@ def update_league(league_id):
     name = data.get('name', '').strip()
     if name:
         league.name = name
-        league.updated_at = League.updated_at.default.arg if hasattr(League, 'updated_at') else league.updated_at
         db.session.commit()
 
     return jsonify({'success': True, 'data': league.to_dict()}), 200
@@ -103,8 +104,7 @@ def join_league(invite_code):
     if not league:
         return jsonify({'success': False, 'message': 'Liga no encontrada'}), 404
 
-    existing = LeagueMembership.query.filter_by(user_id=user.id, league_id=league.id).first()
-    if existing:
+    if LeagueMembership.query.filter_by(user_id=user.id, league_id=league.id).first():
         return jsonify({'success': False, 'message': 'Ya estás en esta liga'}), 409
 
     membership = LeagueMembership(user_id=user.id, league_id=league.id)
@@ -125,7 +125,7 @@ def regenerate_invite(league_id):
 
     league.invite_code = League.generate_invite_code()
     db.session.commit()
-    invite_link = f"{request.host_url.rstrip('/api/') }/join/{league.invite_code}"
+    invite_link = f"{request.host_url.rstrip('/api/')}/join/{league.invite_code}"
     return jsonify({
         'success': True,
         'data': {

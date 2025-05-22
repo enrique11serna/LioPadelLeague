@@ -3,13 +3,15 @@ from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import inspect
 
 # Instancia de SQLAlchemy
-# --------------------------------
+# ----------------------
 db = SQLAlchemy()
 
 
 def init_app(app):
     """
-    Inicializa la app Flask con SQLAlchemy, crea tablas y auto-migra 'is_private'.
+    Inicializa la aplicación Flask con SQLAlchemy, crea las tablas y realiza auto-migraciones.
+
+    Debe llamarse en src/main.py antes de registrar los blueprints.
     """
     # Leer variables de entorno (desde Render o Railway)
     DB_USER = os.environ.get('DB_USER')
@@ -26,32 +28,35 @@ def init_app(app):
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
     db.init_app(app)
 
-    # Crear tablas y auto-migrar
+    # Contexto de aplicación para crear tablas y migrar
     with app.app_context():
-        # Importar modelos
+        # Importar modelos para que SQLAlchemy los conozca
         from src.models.user import User
         from src.models.league import League, LeagueMembership
         from src.models.match import Match, MatchParticipation
         from src.models.card import Card, CardAssignment
         from src.models.rating import PlayerRating, MatchPhoto
 
-        # Crear tablas según modelos
+        # Crear todas las tablas según los modelos definidos
         db.create_all()
 
-        # Auto-migración: añadir columna 'is_private' si no existe
+        # Auto-migrar: añadir columna 'is_private' si falta en la tabla 'leagues'
         inspector = inspect(db.engine)
-        cols = [c['name'] for c in inspector.get_columns('leagues')]
-        if 'is_private' not in cols:
+        existing_columns = [col['name'] for col in inspector.get_columns('leagues')]
+        if 'is_private' not in existing_columns:
             db.session.execute(
                 'ALTER TABLE leagues ADD COLUMN is_private TINYINT(1) NOT NULL DEFAULT 1'
             )
             db.session.commit()
 
-        # Inicializar cartas si no existen
+        # Inicializar las cartas iniciales si no existen
         initialize_cards()
 
 
 def initialize_cards():
+    """
+    Inserta en la base de datos las cartas iniciales si no están presentes.
+    """
     from src.models.card import Card
 
     cards = [
@@ -67,34 +72,11 @@ def initialize_cards():
     for card_data in cards:
         existing = Card.query.filter_by(name=card_data["name"]).first()
         if not existing:
-            new_card = Card(
+            card = Card(
                 name=card_data["name"],
                 description=card_data["description"],
                 is_active=True
             )
-            db.session.add(new_card)
-
-    db.session.commit():
-    from src.models.card import Card
-
-    cards = [
-        {"name": "Gano punto gano juego", "description": "Convierte un punto ganado en un juego completo"},
-        {"name": "Restan cambiados de lado", "description": "Los jugadores del equipo contrario deben jugar cambiados de lado"},
-        {"name": "Robo carta", "description": "Permite robar la carta de un jugador del equipo contrario"},
-        {"name": "Anulo doble falta", "description": "Anula una doble falta del equipo propio"},
-        {"name": "Robo saque", "description": "Permite robar el saque al equipo contrario"},
-        {"name": "Repetimos el punto", "description": "Permite repetir el último punto jugado"},
-        {"name": "Bloqueo de carta rival", "description": "Bloquea el uso de una carta del equipo contrario"}
-    ]
-
-    for card_data in cards:
-        card = Card.query.filter_by(name=card_data["name"]).first()
-        if not card:
-            new_card = Card(
-                name=card_data["name"],
-                description=card_data["description"],
-                is_active=True
-            )
-            db.session.add(new_card)
+            db.session.add(card)
 
     db.session.commit()

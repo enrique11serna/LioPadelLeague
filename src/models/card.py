@@ -1,4 +1,3 @@
-from datetime import datetime
 from src.models import db
 
 class Card(db.Model):
@@ -8,13 +7,10 @@ class Card(db.Model):
     name = db.Column(db.String(100), unique=True, nullable=False)
     description = db.Column(db.Text, nullable=False)
     is_active = db.Column(db.Boolean, default=True)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     # Relación con asignaciones de carta
     assignments = db.relationship(
-        'CardAssignment',
-        back_populates='card',
-        cascade='all, delete-orphan'
+        'CardAssignment', back_populates='card', cascade='all, delete-orphan'
     )
 
     def to_dict(self):
@@ -25,8 +21,7 @@ class Card(db.Model):
             'is_active': self.is_active
         }
 
-# Cartas iniciales disponibles
-INITIAL_CARDS = [
+# Cartas iniciales disponibles\INITIAL_CARDS = [
     'Gano punto gano juego',
     'Restan cambiados de lado',
     'Robo carta',

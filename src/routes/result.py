@@ -3,9 +3,8 @@ from flask import Blueprint, request, jsonify, g, current_app
 from werkzeug.utils import secure_filename
 from datetime import datetime
 from src.models import db
-from src.models.match import Match, MatchParticipation
+from src.models.match import Match, MatchParticipation, CardAssignment
 from src.models.rating import PlayerRating, MatchPhoto
-from src.models.card import CardAssignment
 from src.routes.auth import token_required
 
 result_bp = Blueprint('result', __name__)

@@ -9,9 +9,7 @@ from src.models.user import User
 
 auth_bp = Blueprint('auth', __name__)
 
-# Configuración por defecto para expiración de JWT
-JWT_EXP_DAYS = int(current_app.config.get('JWT_EXP_DELTA_DAYS', 7))
-
+# Decorador para verificar token JWT
 def token_required(f):
     @wraps(f)
     def decorated(*args, **kwargs):
@@ -35,7 +33,6 @@ def token_required(f):
         if not user:
             return jsonify({'success': False, 'message': 'User not found'}), 404
 
-        # Guardar el usuario en flask.g para acceso en la ruta
         g.current_user = user
         return f(*args, **kwargs)
     return decorated
@@ -59,8 +56,9 @@ def register():
     db.session.add(user)
     db.session.commit()
 
-    # Generar token inmediatamente al registrarse
-    exp = datetime.utcnow() + timedelta(days=JWT_EXP_DAYS)
+    # Leer expiración de JWT del config en tiempo de petición
+    exp_days = int(current_app.config.get('JWT_EXP_DELTA_DAYS', 7))
+    exp = datetime.utcnow() + timedelta(days=exp_days)
     token = jwt.encode(
         {'user_id': user.id, 'exp': exp},
         current_app.config['SECRET_KEY'],
@@ -82,7 +80,8 @@ def login():
     if not user or not user.check_password(data.get('password', '')):
         return jsonify({'success': False, 'message': 'Credenciales inválidas'}), 401
 
-    exp = datetime.utcnow() + timedelta(days=JWT_EXP_DAYS)
+    exp_days = int(current_app.config.get('JWT_EXP_DELTA_DAYS', 7))
+    exp = datetime.utcnow() + timedelta(days=exp_days)
     token = jwt.encode(
         {'user_id': user.id, 'exp': exp},
         current_app.config['SECRET_KEY'],
@@ -100,8 +99,6 @@ def login():
 @auth_bp.route('/validate-token', methods=['GET'])
 @token_required
 def validate_token():
-    # Decoding already validó expiración
-    # Opcional: devolver tiempo restante
     return jsonify({'success': True, 'message': 'Token válido'}), 200
 
 @auth_bp.route('/profile', methods=['GET'])

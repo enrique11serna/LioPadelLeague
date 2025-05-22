@@ -7,7 +7,8 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 from flask import Flask, send_from_directory, render_template, request, redirect
 from flask_cors import CORS
 
-from src.models import db, initialize_cards
+from src.models import db
+from src.models.card import initialize_cards
 from src.routes.auth import auth_bp
 from src.routes.league import league_bp
 from src.routes.match import match_bp

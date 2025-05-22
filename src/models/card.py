@@ -21,7 +21,8 @@ class Card(db.Model):
             'is_active': self.is_active
         }
 
-# Cartas iniciales disponibles\INITIAL_CARDS = [
+# Cartas iniciales disponibles
+INITIAL_CARDS = [
     'Gano punto gano juego',
     'Restan cambiados de lado',
     'Robo carta',

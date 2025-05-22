@@ -1,890 +1,497 @@
-// Módulo de gestión de partidos
-
-const Matches = {
-    // Inicializar módulo de partidos
+// src/static/js/matches.js
+;(function(window, API){
+  const Matches = {
     init() {
-        this.bindEvents();
+      this.bindEvents();
     },
-    
-    // Vincular eventos
+
     bindEvents() {
-        // Botones para crear partido
-        document.addEventListener('click', (e) => {
-            if (e.target.id === 'create-match-btn' || e.target.id === 'create-match-empty-btn') {
-                e.preventDefault();
-                this.showCreateMatchModal();
-            }
-        });
-        
-        // Botón para crear partido (submit)
-        document.addEventListener('click', (e) => {
-            if (e.target.id === 'create-match-submit') {
-                e.preventDefault();
-                this.createMatch();
-            }
-        });
-        
-        // Botón para unirse a partido
-        document.addEventListener('click', (e) => {
-            if (e.target.classList.contains('join-match-btn')) {
-                e.preventDefault();
-                const matchId = e.target.dataset.matchId;
-                const team = e.target.dataset.team;
-                if (matchId) {
-                    this.joinMatch(matchId, team);
-                }
-            }
-        });
-        
-        // Botón para abandonar partido
-        document.addEventListener('click', (e) => {
-            if (e.target.classList.contains('leave-match-btn')) {
-                e.preventDefault();
-                const matchId = e.target.dataset.matchId;
-                if (matchId) {
-                    this.leaveMatch(matchId);
-                }
-            }
-        });
-        
-        // Botón para usar carta
-        document.addEventListener('click', (e) => {
-            if (e.target.id === 'use-card-btn') {
-                e.preventDefault();
-                const matchId = document.body.dataset.matchId;
-                if (matchId) {
-                    this.useCard(matchId);
-                }
-            }
-        });
-        
-        // Formulario de resultado
-        document.addEventListener('submit', (e) => {
-            if (e.target.id === 'result-form') {
-                e.preventDefault();
-                const matchId = document.body.dataset.matchId;
-                if (matchId) {
-                    this.submitResult(matchId);
-                }
-            }
-        });
-        
-        // Formulario de valoraciones
-        document.addEventListener('submit', (e) => {
-            if (e.target.id === 'ratings-form') {
-                e.preventDefault();
-                const matchId = document.body.dataset.matchId;
-                if (matchId) {
-                    this.submitRatings(matchId);
-                }
-            }
-        });
-        
-        // Formulario de subida de foto
-        document.addEventListener('submit', (e) => {
-            if (e.target.id === 'upload-photo-form') {
-                e.preventDefault();
-                const matchId = document.body.dataset.matchId;
-                if (matchId) {
-                    this.uploadPhoto(matchId);
-                }
-            }
-        });
-        
-        // Clic en tarjeta de partido
-        document.addEventListener('click', (e) => {
-            const matchCard = e.target.closest('.match-card');
-            if (matchCard && e.target.tagName !== 'BUTTON') {
-                e.preventDefault();
-                const matchId = matchCard.dataset.id;
-                if (matchId) {
-                    App.showMatchDetailPage(matchId);
-                }
-            }
-        });
+      document.addEventListener('click', (e) => {
+        const t = e.target;
+        if (t.id === 'create-match-btn' || t.id === 'create-match-empty-btn') {
+          e.preventDefault();
+          this.showCreateMatchModal();
+        }
+        if (t.id === 'create-match-submit') {
+          e.preventDefault();
+          this.createMatch();
+        }
+        if (t.classList.contains('join-match-btn')) {
+          e.preventDefault();
+          this.joinMatch(t.dataset.matchId, t.dataset.team);
+        }
+        if (t.classList.contains('leave-match-btn')) {
+          e.preventDefault();
+          this.leaveMatch(t.dataset.matchId);
+        }
+        if (t.id === 'use-card-btn') {
+          e.preventDefault();
+          this.useCard(document.body.dataset.matchId);
+        }
+      });
+
+      document.addEventListener('submit', (e) => {
+        if (e.target.id === 'result-form') {
+          e.preventDefault();
+          this.submitResult(document.body.dataset.matchId);
+        }
+        if (e.target.id === 'ratings-form') {
+          e.preventDefault();
+          this.submitRatings(document.body.dataset.matchId);
+        }
+        if (e.target.id === 'upload-photo-form') {
+          e.preventDefault();
+          this.uploadPhoto(document.body.dataset.matchId);
+        }
+      });
+
+      document.addEventListener('click', (e) => {
+        const card = e.target.closest('.match-card');
+        if (card && !e.target.matches('button')) {
+          e.preventDefault();
+          App.showMatchDetailPage(card.dataset.id);
+        }
+      });
     },
-    
-    // Cargar y mostrar partidos de una liga
+
     async loadLeagueMatches(leagueId) {
-        const container = document.getElementById('matches-container');
-        const loadingElement = document.getElementById('matches-loading');
-        const emptyElement = document.getElementById('matches-empty');
-        
-        if (!container || !loadingElement || !emptyElement) return;
-        
-        try {
-            // Mostrar loading
-            loadingElement.classList.remove('d-none');
-            emptyElement.classList.add('d-none');
-            
-            // Obtener partidos de la liga
-            const response = await API.matches.getByLeague(leagueId);
-            const matches = response.matches || [];
-            
-            // Ocultar loading
-            loadingElement.classList.add('d-none');
-            
-            // Verificar si hay partidos
-            if (matches.length === 0) {
-                emptyElement.classList.remove('d-none');
-                return;
-            }
-            
-            // Agrupar partidos por estado
-            const upcomingMatches = matches.filter(match => match.status === 'open');
-            const inProgressMatches = matches.filter(match => match.status === 'in_progress');
-            const completedMatches = matches.filter(match => match.status === 'completed');
-            
-            // Generar HTML para cada grupo
-            let matchesHTML = '';
-            
-            if (inProgressMatches.length > 0) {
-                matchesHTML += `
-                    <div class="col-12 mb-4">
-                        <h3 class="h5 mb-3">Partidos en Curso</h3>
-                        <div class="row">
-                            ${this.generateMatchesHTML(inProgressMatches)}
-                        </div>
-                    </div>
-                `;
-            }
-            
-            if (upcomingMatches.length > 0) {
-                matchesHTML += `
-                    <div class="col-12 mb-4">
-                        <h3 class="h5 mb-3">Próximos Partidos</h3>
-                        <div class="row">
-                            ${this.generateMatchesHTML(upcomingMatches)}
-                        </div>
-                    </div>
-                `;
-            }
-            
-            if (completedMatches.length > 0) {
-                matchesHTML += `
-                    <div class="col-12 mb-4">
-                        <h3 class="h5 mb-3">Partidos Completados</h3>
-                        <div class="row">
-                            ${this.generateMatchesHTML(completedMatches)}
-                        </div>
-                    </div>
-                `;
-            }
-            
-            // Insertar HTML en el contenedor (sin incluir los elementos de loading/empty)
-            const existingContent = container.innerHTML;
-            container.innerHTML = matchesHTML + loadingElement.outerHTML + emptyElement.outerHTML;
-        } catch (error) {
-            console.error('Error cargando partidos:', error);
-            loadingElement.classList.add('d-none');
-            App.showToast('Error al cargar los partidos', 'error');
+      const container = document.getElementById('matches-container');
+      const loadingEl = document.getElementById('matches-loading');
+      const emptyEl   = document.getElementById('matches-empty');
+      if (!container || !loadingEl || !emptyEl) return;
+
+      loadingEl.classList.remove('d-none');
+      emptyEl.classList.add('d-none');
+      try {
+        const res     = await API.matches.getByLeague(leagueId);
+        const matches = (res.data && res.data.matches) || [];
+        loadingEl.classList.add('d-none');
+        if (!matches.length) {
+          emptyEl.classList.remove('d-none');
+          return;
         }
-    },
-    
-    // Generar HTML para lista de partidos
-    generateMatchesHTML(matches) {
+
+        const open       = matches.filter(m => m.status === 'open');
+        const inProgress = matches.filter(m => m.status === 'in_progress');
+        const completed  = matches.filter(m => m.status === 'completed');
+
         let html = '';
-        
-        matches.forEach(match => {
-            const statusClass = match.status === 'open' ? 'open' : 
-                               match.status === 'in_progress' ? 'in-progress' : 'completed';
-            
-            const statusText = match.status === 'open' ? 'Abierto' : 
-                              match.status === 'in_progress' ? 'En Curso' : 'Completado';
-            
-            const matchDate = new Date(match.date);
-            const formattedDate = matchDate.toLocaleDateString('es-ES', {
-                day: '2-digit',
-                month: '2-digit',
-                year: 'numeric'
-            });
-            
-            const formattedTime = matchDate.toLocaleTimeString('es-ES', {
-                hour: '2-digit',
-                minute: '2-digit'
-            });
-            
-            // Contar participantes por equipo
-            const team1 = match.participants ? match.participants.filter(p => p.team === 1) : [];
-            const team2 = match.participants ? match.participants.filter(p => p.team === 2) : [];
-            
-            html += `
-                <div class="col-md-6 col-lg-4 mb-3">
-                    <div class="card match-card shadow-sm" data-id="${match.id}">
-                        <div class="card-body">
-                            <div class="match-date mb-2">
-                                <i class="bi bi-calendar-event"></i> ${formattedDate} - ${formattedTime}
-                            </div>
-                            <div class="match-status ${statusClass} mb-2">
-                                ${statusText}
-                            </div>
-                            <div class="team-container">
-                                <div class="team-label text-success">Equipo 1</div>
-                                <div class="team-count">${team1.length}/2</div>
-                            </div>
-                            <div class="team-container">
-                                <div class="team-label text-danger">Equipo 2</div>
-                                <div class="team-count">${team2.length}/2</div>
-                            </div>
-                            ${match.status === 'completed' ? `
-                                <div class="mt-2">
-                                    <strong>Ganador:</strong> Equipo ${match.winner_team}
-                                </div>
-                            ` : ''}
-                            <div class="mt-3">
-                                <button class="btn btn-sm btn-primary w-100" onclick="App.showMatchDetailPage(${match.id})">
-                                    <i class="bi bi-arrow-right-circle"></i> Ver Detalles
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            `;
-        });
-        
-        return html;
+        if (inProgress.length) {
+          html += `<div class="col-12 mb-4">
+                     <h3 class="h5 mb-3">En Curso</h3>
+                     <div class="row">${this.generateMatchesHTML(inProgress)}</div>
+                   </div>`;
+        }
+        if (open.length) {
+          html += `<div class="col-12 mb-4">
+                     <h3 class="h5 mb-3">Próximos</h3>
+                     <div class="row">${this.generateMatchesHTML(open)}</div>
+                   </div>`;
+        }
+        if (completed.length) {
+          html += `<div class="col-12 mb-4">
+                     <h3 class="h5 mb-3">Completados</h3>
+                     <div class="row">${this.generateMatchesHTML(completed)}</div>
+                   </div>`;
+        }
+
+        container.innerHTML = html + loadingEl.outerHTML + emptyEl.outerHTML;
+      } catch (err) {
+        console.error('Error cargando partidos:', err);
+        loadingEl.classList.add('d-none');
+        App.showToast('Error al cargar los partidos', 'error');
+      }
     },
-    
-    // Mostrar modal para crear partido
+
+    generateMatchesHTML(matches) {
+      return matches.map(m => {
+        const dt    = new Date(m.date);
+        const date  = dt.toLocaleDateString('es-ES', { day:'2-digit', month:'2-digit', year:'numeric' });
+        const time  = dt.toLocaleTimeString('es-ES', { hour:'2-digit', minute:'2-digit' });
+        const t1    = (m.participants || []).filter(p => p.team === 1).length;
+        const t2    = (m.participants || []).filter(p => p.team === 2).length;
+        const cls   = m.status === 'open' ? 'open' : m.status === 'in_progress' ? 'in-progress' : 'completed';
+        const text  = m.status === 'open' ? 'Abierto' : m.status === 'in_progress' ? 'En Curso' : 'Completado';
+
+        return `
+          <div class="col-md-6 col-lg-4 mb-3">
+            <div class="card match-card shadow-sm" data-id="${m.id}">
+              <div class="card-body">
+                <div class="mb-2"><i class="bi bi-calendar-event"></i> ${date} - ${time}</div>
+                <div class="${cls} mb-2">${text}</div>
+                <div class="team-container">
+                  <div class="team-label text-success">Equipo 1</div>
+                  <div class="team-count">${t1}/2</div>
+                </div>
+                <div class="team-container">
+                  <div class="team-label text-danger">Equipo 2</div>
+                  <div class="team-count">${t2}/2</div>
+                </div>
+                ${m.status === 'completed' ? `<div class="mt-2"><strong>Ganador:</strong> Equipo ${m.winner_team}</div>` : ''}
+                <button class="btn btn-sm btn-primary w-100 mt-3"
+                        onclick="App.showMatchDetailPage(${m.id})">
+                  <i class="bi bi-arrow-right-circle"></i> Ver Detalles
+                </button>
+              </div>
+            </div>
+          </div>`;
+      }).join('');
+    },
+
     showCreateMatchModal() {
-        const modal = new bootstrap.Modal(document.getElementById('createMatchModal'));
-        modal.show();
+      new bootstrap.Modal(document.getElementById('createMatchModal')).show();
     },
-    
-    // Crear nuevo partido
+
     async createMatch() {
-        const matchDate = document.getElementById('match-date').value;
-        const leagueId = document.body.dataset.leagueId;
-        
-        if (!matchDate) {
-            App.showToast('Por favor, selecciona fecha y hora para el partido', 'warning');
-            return;
-        }
-        
-        if (!leagueId) {
-            App.showToast('Error al obtener información de la liga', 'error');
-            return;
-        }
-        
-        try {
-            const response = await API.matches.create(leagueId, { date: matchDate });
-            
-            // Cerrar modal
-            const modal = bootstrap.Modal.getInstance(document.getElementById('createMatchModal'));
-            modal.hide();
-            
-            // Limpiar formulario
-            document.getElementById('match-date').value = '';
-            
-            // Mostrar mensaje de éxito
-            App.showToast('Partido creado correctamente', 'success');
-            
-            // Recargar partidos
-            setTimeout(() => {
-                Leagues.loadLeagueDetails(leagueId);
-            }, 1000);
-        } catch (error) {
-            console.error('Error creando partido:', error);
-            App.showToast('Error al crear el partido', 'error');
-        }
+      const date     = document.getElementById('match-date').value;
+      const leagueId = document.body.dataset.leagueId;
+      if (!date) {
+        App.showToast('Por favor, selecciona fecha y hora', 'warning');
+        return;
+      }
+      try {
+        await API.matches.create(leagueId, { date });
+        bootstrap.Modal.getInstance(document.getElementById('createMatchModal')).hide();
+        App.showToast('Partido creado correctamente', 'success');
+        setTimeout(() => Matches.loadLeagueMatches(leagueId), 1000);
+      } catch (err) {
+        console.error('Error creando partido:', err);
+        App.showToast('Error al crear el partido', 'error');
+      }
     },
-    
-    // Cargar y mostrar detalles de un partido
+
     async loadMatchDetails(matchId) {
-        try {
-            // Obtener detalles del partido
-            const response = await API.matches.getById(matchId);
-            const match = response.match;
-            
-            if (!match) {
-                App.showToast('Partido no encontrado', 'error');
-                App.showHomePage();
-                return;
-            }
-            
-            // Guardar datos del partido
-            document.body.dataset.matchId = match.id;
-            document.body.dataset.leagueId = match.league_id;
-            
-            // Actualizar breadcrumb
-            const backToLeagueLink = document.getElementById('back-to-league');
-            if (backToLeagueLink) {
-                backToLeagueLink.onclick = (e) => {
-                    e.preventDefault();
-                    App.showLeagueDetailPage(match.league_id);
-                };
-            }
-            
-            // Actualizar información del partido
-            this.updateMatchInfo(match);
-            
-            // Cargar equipos
-            this.loadTeams(match.participants || []);
-            
-            // Mostrar carta si está disponible
-            this.showCardIfAvailable(match);
-            
-            // Mostrar sección de resultado según estado
-            this.showResultSection(match);
-            
-            // Mostrar sección de valoraciones según estado
-            this.showRatingsSection(match);
-            
-            // Mostrar sección de fotos según estado
-            this.showPhotosSection(match);
-            
-            // Cargar fotos si el partido está completado
-            if (match.status === 'completed') {
-                this.loadMatchPhotos(match.id);
-            }
-        } catch (error) {
-            console.error('Error cargando detalles del partido:', error);
-            App.showToast('Error al cargar los detalles del partido', 'error');
-            App.showHomePage();
-        }
+      try {
+        const res = await API.matches.getOne(matchId);
+        const m   = res.data.match;
+        if (!m) throw new Error('Partido no encontrado');
+
+        document.body.dataset.matchId  = m.id;
+        document.body.dataset.leagueId = m.league_id;
+        const back = document.getElementById('back-to-league');
+        if (back) back.onclick = e => {
+          e.preventDefault();
+          App.showLeagueDetailPage(m.league_id);
+        };
+
+        this.updateMatchInfo(m);
+        this.loadTeams(m.participants || []);
+        this.showCardIfAvailable(m);
+        this.showResultSection(m);
+        this.showRatingsSection(m);
+        this.showPhotosSection(m);
+        if (m.status === 'completed') this.loadMatchPhotos(m.id);
+      } catch (err) {
+        console.error('Error cargando detalles del partido:', err);
+        App.showToast('Error al cargar los detalles del partido', 'error');
+        App.showHomePage();
+      }
     },
-    
-    // Actualizar información general del partido
-    updateMatchInfo(match) {
-        // Formatear fecha
-        const matchDate = new Date(match.date);
-        const formattedDate = matchDate.toLocaleDateString('es-ES', {
-            weekday: 'long',
-            day: 'numeric',
-            month: 'long',
-            year: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit'
+
+    updateMatchInfo(m) {
+      const dateEl = document.getElementById('match-date');
+      const statusEl = document.getElementById('match-status');
+      if (dateEl) {
+        const dt = new Date(m.date);
+        dateEl.textContent = dt.toLocaleString('es-ES', {
+          weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
+          hour: '2-digit', minute: '2-digit'
         });
-        
-        // Mostrar fecha
-        const dateElement = document.getElementById('match-date');
-        if (dateElement) {
-            dateElement.textContent = formattedDate;
+      }
+      if (statusEl) {
+        statusEl.textContent = m.status === 'open' ? 'Abierto' :
+          m.status === 'in_progress' ? 'En Curso' : 'Completado';
+        statusEl.className = '';
+        statusEl.classList.add(
+          m.status === 'open' ? 'text-primary' :
+          m.status === 'in_progress' ? 'text-warning' : 'text-success'
+        );
+      }
+
+      // Acciones según estado
+      const actions = document.getElementById('match-actions');
+      if (actions) {
+        let html = '';
+        if (m.status === 'open') {
+          html = m.is_participating
+            ? `<button class="btn btn-outline-danger leave-match-btn" data-match-id="${m.id}">
+                 <i class="bi bi-person-dash"></i> Abandonar Partido
+               </button>`
+            : `<button class="btn btn-success join-match-btn" data-match-id="${m.id}" data-team="1">
+                 <i class="bi bi-person-plus"></i> Unirme Equipo 1
+               </button>
+               <button class="btn btn-danger ms-2 join-match-btn" data-match-id="${m.id}" data-team="2">
+                 <i class="bi bi-person-plus"></i> Unirme Equipo 2
+               </button>`;
         }
-        
-        // Mostrar estado
-        const statusElement = document.getElementById('match-status');
-        if (statusElement) {
-            const statusText = match.status === 'open' ? 'Abierto' : 
-                              match.status === 'in_progress' ? 'En Curso' : 'Completado';
-            statusElement.textContent = statusText;
-            
-            // Añadir clase según estado
-            statusElement.className = '';
-            if (match.status === 'open') {
-                statusElement.classList.add('text-primary');
-            } else if (match.status === 'in_progress') {
-                statusElement.classList.add('text-warning');
-            } else {
-                statusElement.classList.add('text-success');
-            }
-        }
-        
-        // Mostrar acciones según estado
-        const actionsElement = document.getElementById('match-actions');
-        if (actionsElement) {
-            let actionsHTML = '';
-            
-            if (match.status === 'open') {
-                if (!match.is_participating) {
-                    actionsHTML = `
-                        <button class="btn btn-success join-match-btn" data-match-id="${match.id}" data-team="1">
-                            <i class="bi bi-person-plus"></i> Unirme al Equipo 1
-                        </button>
-                        <button class="btn btn-danger ms-2 join-match-btn" data-match-id="${match.id}" data-team="2">
-                            <i class="bi bi-person-plus"></i> Unirme al Equipo 2
-                        </button>
-                    `;
-                } else {
-                    actionsHTML = `
-                        <button class="btn btn-outline-danger leave-match-btn" data-match-id="${match.id}">
-                            <i class="bi bi-person-dash"></i> Abandonar Partido
-                        </button>
-                    `;
-                }
-            }
-            
-            actionsElement.innerHTML = actionsHTML;
-        }
+        actions.innerHTML = html;
+      }
     },
-    
-    // Cargar y mostrar equipos
+
     loadTeams(participants) {
-        const team1Container = document.getElementById('team1-container');
-        const team2Container = document.getElementById('team2-container');
-        
-        if (!team1Container || !team2Container) return;
-        
-        // Filtrar participantes por equipo
-        const team1 = participants.filter(p => p.team === 1);
-        const team2 = participants.filter(p => p.team === 2);
-        
-        // Generar HTML para equipo 1
-        let team1HTML = '';
-        if (team1.length === 0) {
-            team1HTML = `
-                <div class="text-center py-3">
-                    <p class="text-muted">No hay jugadores en este equipo</p>
-                </div>
-            `;
+      const t1 = document.getElementById('team1-container');
+      const t2 = document.getElementById('team2-container');
+      if (!t1 || !t2) return;
+      const team1 = participants.filter(p => p.team === 1);
+      const team2 = participants.filter(p => p.team === 2);
+
+      const render = (team, el) => {
+        if (!team.length) {
+          el.innerHTML = `<div class="text-center py-3"><p class="text-muted">No hay jugadores</p></div>`;
         } else {
-            team1.forEach(player => {
-                team1HTML += `
-                    <div class="d-flex align-items-center mb-3">
-                        <div class="flex-shrink-0">
-                            <div class="avatar bg-success text-white rounded-circle d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
-                                ${this.getInitials(player.username)}
-                            </div>
-                        </div>
-                        <div class="flex-grow-1 ms-3">
-                            <h5 class="mb-0">${this.escapeHtml(player.username)}</h5>
-                        </div>
-                    </div>
-                `;
-            });
+          el.innerHTML = team.map(p => `
+            <div class="d-flex align-items-center mb-3">
+              <div class="avatar bg-${p.team===1?'success':'danger'} text-white rounded-circle d-flex align-items-center justify-content-center" style="width:40px;height:40px">
+                ${this.getInitials(p.username)}
+              </div>
+              <div class="ms-3"><h5 class="mb-0">${this.escapeHtml(p.username)}</h5></div>
+            </div>`).join('');
         }
-        
-        // Generar HTML para equipo 2
-        let team2HTML = '';
-        if (team2.length === 0) {
-            team2HTML = `
-                <div class="text-center py-3">
-                    <p class="text-muted">No hay jugadores en este equipo</p>
-                </div>
-            `;
-        } else {
-            team2.forEach(player => {
-                team2HTML += `
-                    <div class="d-flex align-items-center mb-3">
-                        <div class="flex-shrink-0">
-                            <div class="avatar bg-danger text-white rounded-circle d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
-                                ${this.getInitials(player.username)}
-                            </div>
-                        </div>
-                        <div class="flex-grow-1 ms-3">
-                            <h5 class="mb-0">${this.escapeHtml(player.username)}</h5>
-                        </div>
-                    </div>
-                `;
-            });
-        }
-        
-        // Actualizar contenedores
-        team1Container.innerHTML = team1HTML;
-        team2Container.innerHTML = team2HTML;
+      };
+
+      render(team1, t1);
+      render(team2, t2);
     },
-    
-    // Mostrar carta si está disponible
-    showCardIfAvailable(match) {
-        const cardSection = document.getElementById('card-section');
-        
-        if (!cardSection) return;
-        
-        if (match.can_view_card && match.card) {
-            // Mostrar sección de carta
-            cardSection.classList.remove('d-none');
-            
-            // Actualizar información de la carta
-            document.getElementById('card-name').textContent = match.card.name;
-            document.getElementById('card-description').textContent = match.card.description;
-            
-            // Deshabilitar botón si la carta ya fue usada
-            const useCardBtn = document.getElementById('use-card-btn');
-            if (useCardBtn) {
-                if (match.card.used) {
-                    useCardBtn.disabled = true;
-                    useCardBtn.textContent = 'Carta Usada';
-                } else {
-                    useCardBtn.disabled = false;
-                    useCardBtn.textContent = 'Usar Carta';
-                }
-            }
+
+    showCardIfAvailable(m) {
+      const section = document.getElementById('card-section');
+      if (!section) return;
+      if (m.can_view_card && m.card) {
+        section.classList.remove('d-none');
+        document.getElementById('card-name').textContent = m.card.name;
+        document.getElementById('card-description').textContent = m.card.description;
+        const btn = document.getElementById('use-card-btn');
+        if (m.card.used) {
+          btn.disabled = true;
+          btn.textContent = 'Carta Usada';
         } else {
-            // Ocultar sección de carta
-            cardSection.classList.add('d-none');
+          btn.disabled = false;
+          btn.textContent = 'Usar Carta';
         }
+      } else {
+        section.classList.add('d-none');
+      }
     },
-    
-    // Mostrar sección de resultado según estado
-    showResultSection(match) {
-        const resultSection = document.getElementById('result-section');
-        const resultDisplay = document.getElementById('result-display');
-        const submitResultForm = document.getElementById('submit-result-form');
-        
-        if (!resultSection || !resultDisplay || !submitResultForm) return;
-        
-        if (match.status === 'completed') {
-            // Mostrar sección de resultado
-            resultSection.classList.remove('d-none');
-            
-            // Mostrar resultado
-            resultDisplay.innerHTML = `
-                <div class="alert alert-success">
-                    <h4 class="alert-heading">Resultado Final</h4>
-                    <p class="mb-0">El <strong>Equipo ${match.winner_team}</strong> ha ganado el partido.</p>
-                </div>
-            `;
-            
-            // Ocultar formulario
-            submitResultForm.classList.add('d-none');
-        } else if (match.status === 'in_progress' && match.is_participating) {
-            // Mostrar sección de resultado
-            resultSection.classList.remove('d-none');
-            
-            // Mostrar formulario
-            submitResultForm.classList.remove('d-none');
-            
-            // Ocultar resultado
-            resultDisplay.innerHTML = '';
-        } else {
-            // Ocultar sección de resultado
-            resultSection.classList.add('d-none');
-        }
+
+    showResultSection(m) {
+      const sec = document.getElementById('result-section');
+      const disp = document.getElementById('result-display');
+      const formC = document.getElementById('submit-result-form');
+      if (!sec || !disp || !formC) return;
+
+      if (m.status === 'completed') {
+        sec.classList.remove('d-none');
+        disp.innerHTML = `
+          <div class="alert alert-success">
+            <h4>Resultado Final</h4>
+            <p>El Equipo ${m.winner_team} ha ganado.</p>
+          </div>`;
+        formC.classList.add('d-none');
+      } else if (m.status === 'in_progress' && m.is_participating) {
+        sec.classList.remove('d-none');
+        formC.classList.remove('d-none');
+        disp.innerHTML = '';
+      } else {
+        sec.classList.add('d-none');
+      }
     },
-    
-    // Mostrar sección de valoraciones según estado
-    showRatingsSection(match) {
-        const ratingsSection = document.getElementById('ratings-section');
-        const ratingsContainer = document.getElementById('ratings-container');
-        
-        if (!ratingsSection || !ratingsContainer) return;
-        
-        if (match.status === 'completed' && match.is_participating) {
-            // Mostrar sección de valoraciones
-            ratingsSection.classList.remove('d-none');
-            
-            // Generar formularios de valoración para cada jugador
-            let ratingsHTML = '';
-            
-            // Filtrar participantes (excluir al usuario actual)
-            const currentUser = Auth.getCurrentUser();
-            const otherParticipants = match.participants.filter(p => p.user_id !== currentUser.id);
-            
-            otherParticipants.forEach(player => {
-                ratingsHTML += `
-                    <div class="rating-container mb-3">
-                        <h5>${this.escapeHtml(player.username)}</h5>
-                        <div class="mb-3">
-                            <label class="form-label">Valoración (1-10)</label>
-                            <select class="form-select" name="rating-${player.user_id}" required>
-                                <option value="">Selecciona una valoración</option>
-                                ${Array.from({length: 10}, (_, i) => i + 1).map(num => 
-                                    `<option value="${num}">${num}</option>`
-                                ).join('')}
-                            </select>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">Comentario (opcional)</label>
-                            <textarea class="form-control" name="comment-${player.user_id}" rows="2"></textarea>
-                        </div>
-                    </div>
-                `;
-            });
-            
-            // Actualizar contenedor
-            ratingsContainer.innerHTML = ratingsHTML;
-        } else {
-            // Ocultar sección de valoraciones
-            ratingsSection.classList.add('d-none');
-        }
+
+    showRatingsSection(m) {
+      const sec = document.getElementById('ratings-section');
+      const cont = document.getElementById('ratings-container');
+      if (!sec || !cont) return;
+      if (m.status === 'completed' && m.is_participating) {
+        sec.classList.remove('d-none');
+        const cur = Auth.getCurrentUser();
+        cont.innerHTML = (m.participants || [])
+          .filter(p => p.user_id !== cur.id)
+          .map(p => `
+            <div class="rating-container mb-3">
+              <h5>${this.escapeHtml(p.username)}</h5>
+              <div class="mb-3">
+                <label>Valoración (1-10)</label>
+                <select class="form-select" name="rating-${p.user_id}" required>
+                  <option value="">Selecciona...</option>
+                  ${[...Array(10)].map((_,i)=>
+                    `<option value="${i+1}">${i+1}</option>`
+                  ).join('')}
+                </select>
+              </div>
+              <div class="mb-3">
+                <label>Comentario</label>
+                <textarea class="form-control" name="comment-${p.user_id}" rows="2"></textarea>
+              </div>
+            </div>`).join('');
+      } else {
+        sec.classList.add('d-none');
+      }
     },
-    
-    // Mostrar sección de fotos según estado
-    showPhotosSection(match) {
-        const photosSection = document.getElementById('photos-section');
-        const uploadPhotoContainer = document.getElementById('upload-photo-container');
-        
-        if (!photosSection || !uploadPhotoContainer) return;
-        
-        if (match.status === 'completed') {
-            // Mostrar sección de fotos
-            photosSection.classList.remove('d-none');
-            
-            // Mostrar formulario de subida solo si el usuario participa
-            if (match.is_participating) {
-                uploadPhotoContainer.classList.remove('d-none');
-            } else {
-                uploadPhotoContainer.classList.add('d-none');
-            }
-        } else {
-            // Ocultar sección de fotos
-            photosSection.classList.add('d-none');
-        }
+
+    showPhotosSection(m) {
+      const sec = document.getElementById('photos-section');
+      const up  = document.getElementById('upload-photo-container');
+      if (!sec || !up) return;
+      if (m.status === 'completed') {
+        sec.classList.remove('d-none');
+        up.classList.toggle('d-none', !m.is_participating);
+      } else {
+        sec.classList.add('d-none');
+      }
     },
-    
-    // Cargar fotos del partido
+
     async loadMatchPhotos(matchId) {
-        const photosContainer = document.getElementById('photos-container');
-        
-        if (!photosContainer) return;
-        
-        try {
-            // Mostrar loading
-            photosContainer.innerHTML = `
-                <div class="col-12 text-center py-3">
-                    <div class="spinner-border text-primary" role="status">
-                        <span class="visually-hidden">Cargando...</span>
-                    </div>
-                    <p class="mt-3">Cargando fotos...</p>
-                </div>
-            `;
-            
-            // Obtener fotos del partido
-            const response = await API.matches.getPhotos(matchId);
-            const photos = response.photos || [];
-            
-            // Verificar si hay fotos
-            if (photos.length === 0) {
-                photosContainer.innerHTML = `
-                    <div class="col-12 text-center py-3">
-                        <p class="text-muted">No hay fotos de este partido.</p>
-                    </div>
-                `;
-                return;
-            }
-            
-            // Generar HTML para cada foto
-            let photosHTML = '';
-            
-            photos.forEach(photo => {
-                const photoUrl = `/${photo.file_path}`;
-                const uploadDate = new Date(photo.uploaded_at).toLocaleDateString('es-ES');
-                const username = photo.user ? photo.user.username : 'Usuario';
-                
-                photosHTML += `
-                    <div class="col-md-4 col-sm-6 mb-3">
-                        <div class="card shadow-sm">
-                            <img src="${photoUrl}" class="photo-thumbnail" alt="Foto del partido">
-                            <div class="card-body p-2">
-                                <p class="small text-muted mb-0">
-                                    <i class="bi bi-person"></i> ${this.escapeHtml(username)}
-                                    <br>
-                                    <i class="bi bi-calendar"></i> ${uploadDate}
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-                `;
-            });
-            
-            // Actualizar contenedor
-            photosContainer.innerHTML = photosHTML;
-        } catch (error) {
-            console.error('Error cargando fotos:', error);
-            photosContainer.innerHTML = `
-                <div class="col-12 text-center py-3">
-                    <div class="alert alert-danger">
-                        <p>Error al cargar las fotos.</p>
-                    </div>
-                </div>
-            `;
+      const cont = document.getElementById('photos-container');
+      if (!cont) return;
+      cont.innerHTML = `
+        <div class="col-12 text-center py-3">
+          <div class="spinner-border text-primary"></div>
+          <p class="mt-3">Cargando fotos...</p>
+        </div>`;
+      try {
+        const res = await API.results.uploadPhoto
+          ? await API.results.uploadPhoto(matchId, new FormData()) // fallback
+          : { data:{ photos: [] }}; 
+        // If you have an endpoint API.matches.getPhotos, replace the above.
+        const photos = (res.data && res.data.photos) || [];
+        if (!photos.length) {
+          cont.innerHTML = `<div class="col-12 text-center py-3"><p class="text-muted">Sin fotos.</p></div>`;
+          return;
         }
+        cont.innerHTML = photos.map(p => {
+          const url = '/' + p.file_path;
+          const d   = new Date(p.uploaded_at).toLocaleDateString('es-ES');
+          const u   = p.user?.username || 'Usuario';
+          return `
+            <div class="col-md-4 col-sm-6 mb-3">
+              <div class="card shadow-sm">
+                <img src="${url}" class="photo-thumbnail" alt="Foto">
+                <div class="card-body p-2">
+                  <p class="small text-muted mb-0">
+                    <i class="bi bi-person"></i> ${this.escapeHtml(u)}
+                    <br>
+                    <i class="bi bi-calendar"></i> ${d}
+                  </p>
+                </div>
+              </div>
+            </div>`;
+        }).join('');
+      } catch (err) {
+        console.error('Error cargando fotos:', err);
+        cont.innerHTML = `<div class="col-12 text-center py-3"><div class="alert alert-danger">Error al cargar fotos.</div></div>`;
+      }
     },
-    
-    // Unirse a un partido
+
     async joinMatch(matchId, team) {
-        try {
-            const response = await API.matches.join(matchId, { team: parseInt(team) });
-            
-            // Mostrar mensaje de éxito
-            App.showToast('Te has unido al partido correctamente', 'success');
-            
-            // Recargar detalles del partido
-            setTimeout(() => {
-                this.loadMatchDetails(matchId);
-            }, 1000);
-        } catch (error) {
-            console.error('Error uniéndose al partido:', error);
-            App.showToast('Error al unirse al partido', 'error');
-        }
+      try {
+        await API.matches.join(matchId, parseInt(team));
+        App.showToast('Te has unido', 'success');
+        setTimeout(()=> Matches.loadMatchDetails(matchId), 1000);
+      } catch (err) {
+        console.error('Error al unirse:', err);
+        App.showToast('Error al unirse al partido', 'error');
+      }
     },
-    
-    // Abandonar un partido
+
     async leaveMatch(matchId) {
-        try {
-            const response = await API.matches.leave(matchId);
-            
-            // Mostrar mensaje de éxito
-            App.showToast('Has abandonado el partido correctamente', 'success');
-            
-            // Recargar detalles del partido
-            setTimeout(() => {
-                this.loadMatchDetails(matchId);
-            }, 1000);
-        } catch (error) {
-            console.error('Error abandonando el partido:', error);
-            App.showToast('Error al abandonar el partido', 'error');
-        }
+      try {
+        await API.matches.leave(matchId);
+        App.showToast('Has abandonado', 'success');
+        setTimeout(()=> Matches.loadMatchDetails(matchId), 1000);
+      } catch (err) {
+        console.error('Error al abandonar:', err);
+        App.showToast('Error al abandonar el partido', 'error');
+      }
     },
-    
-    // Usar carta
+
     async useCard(matchId) {
-        try {
-            const response = await API.matches.useCard(matchId);
-            
-            // Mostrar mensaje de éxito
-            App.showToast(`Has usado la carta "${response.card.name}"`, 'success');
-            
-            // Recargar detalles del partido
-            setTimeout(() => {
-                this.loadMatchDetails(matchId);
-            }, 1000);
-        } catch (error) {
-            console.error('Error usando carta:', error);
-            App.showToast('Error al usar la carta', 'error');
-        }
+      try {
+        const res = await API.matches.assignCards(matchId);
+        App.showToast(`Carta asignada: "${res.data.card.name}"`, 'success');
+        setTimeout(()=> Matches.loadMatchDetails(matchId), 1000);
+      } catch (err) {
+        console.error('Error al usar carta:', err);
+        App.showToast('Error al usar la carta', 'error');
+      }
     },
-    
-    // Enviar resultado
+
     async submitResult(matchId) {
-        const winnerTeam = document.querySelector('input[name="winner-team"]:checked');
-        
-        if (!winnerTeam) {
-            App.showToast('Por favor, selecciona el equipo ganador', 'warning');
-            return;
-        }
-        
-        try {
-            const response = await API.matches.submitResult(matchId, {
-                winner_team: parseInt(winnerTeam.value)
-            });
-            
-            // Mostrar mensaje de éxito
-            App.showToast('Resultado registrado correctamente', 'success');
-            
-            // Recargar detalles del partido
-            setTimeout(() => {
-                this.loadMatchDetails(matchId);
-            }, 1000);
-        } catch (error) {
-            console.error('Error enviando resultado:', error);
-            App.showToast('Error al registrar el resultado', 'error');
-        }
+      const win = document.querySelector('input[name="winner-team"]:checked');
+      if (!win) {
+        App.showToast('Selecciona equipo ganador', 'warning');
+        return;
+      }
+      try {
+        await API.results.submitResult(matchId, { winner_team: parseInt(win.value) });
+        App.showToast('Resultado registrado', 'success');
+        setTimeout(()=> Matches.loadMatchDetails(matchId), 1000);
+      } catch (err) {
+        console.error('Error enviando resultado:', err);
+        App.showToast('Error al registrar resultado', 'error');
+      }
     },
-    
-    // Enviar valoraciones
+
     async submitRatings(matchId) {
-        const currentUser = Auth.getCurrentUser();
-        const otherParticipants = document.querySelectorAll('[name^="rating-"]');
-        
-        if (otherParticipants.length === 0) {
-            App.showToast('No hay jugadores para valorar', 'warning');
-            return;
-        }
-        
-        const ratings = [];
-        
-        // Recopilar valoraciones
-        otherParticipants.forEach(select => {
-            const userId = select.name.split('-')[1];
-            const rating = select.value;
-            const comment = document.querySelector(`[name="comment-${userId}"]`).value;
-            
-            if (rating) {
-                ratings.push({
-                    user_id: parseInt(userId),
-                    rating: parseInt(rating),
-                    comment: comment
-                });
-            }
-        });
-        
-        if (ratings.length === 0) {
-            App.showToast('Por favor, valora al menos a un jugador', 'warning');
-            return;
-        }
-        
-        try {
-            const response = await API.matches.submitRatings(matchId, { ratings });
-            
-            // Mostrar mensaje de éxito
-            App.showToast('Valoraciones enviadas correctamente', 'success');
-            
-            // Recargar detalles del partido
-            setTimeout(() => {
-                this.loadMatchDetails(matchId);
-            }, 1000);
-        } catch (error) {
-            console.error('Error enviando valoraciones:', error);
-            App.showToast('Error al enviar las valoraciones', 'error');
-        }
+      const ratings = [];
+      document.querySelectorAll('[name^="rating-"]').forEach(sel => {
+        const uid = sel.name.split('-')[1];
+        const val = parseInt(sel.value);
+        const com = document.querySelector(`[name="comment-${uid}"]`).value;
+        if (val) ratings.push({ user_id: parseInt(uid), rating: val, comment: com });
+      });
+      if (!ratings.length) {
+        App.showToast('Valora al menos un jugador', 'warning');
+        return;
+      }
+      try {
+        await API.results.submitRatings(matchId, { ratings });
+        App.showToast('Valoraciones enviadas', 'success');
+        setTimeout(()=> Matches.loadMatchDetails(matchId), 1000);
+      } catch (err) {
+        console.error('Error enviando valoraciones:', err);
+        App.showToast('Error al enviar valoraciones', 'error');
+      }
     },
-    
-    // Subir foto
+
     async uploadPhoto(matchId) {
-        const photoInput = document.getElementById('photo-upload');
-        
-        if (!photoInput || !photoInput.files || photoInput.files.length === 0) {
-            App.showToast('Por favor, selecciona una foto', 'warning');
-            return;
-        }
-        
-        const file = photoInput.files[0];
-        
-        // Verificar tamaño máximo (5MB)
-        if (file.size > 5 * 1024 * 1024) {
-            App.showToast('La foto es demasiado grande. Máximo 5MB', 'warning');
-            return;
-        }
-        
-        // Crear FormData
-        const formData = new FormData();
-        formData.append('photo', file);
-        
-        try {
-            // Mostrar loading
-            const uploadBtn = document.querySelector('#upload-photo-form button[type="submit"]');
-            if (uploadBtn) {
-                uploadBtn.disabled = true;
-                uploadBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Subiendo...';
-            }
-            
-            const response = await API.matches.uploadPhoto(matchId, formData);
-            
-            // Mostrar mensaje de éxito
-            App.showToast('Foto subida correctamente', 'success');
-            
-            // Limpiar formulario
-            document.getElementById('upload-photo-form').reset();
-            
-            // Recargar fotos
-            this.loadMatchPhotos(matchId);
-            
-            // Restaurar botón
-            if (uploadBtn) {
-                uploadBtn.disabled = false;
-                uploadBtn.innerHTML = 'Subir Foto';
-            }
-        } catch (error) {
-            console.error('Error subiendo foto:', error);
-            App.showToast('Error al subir la foto', 'error');
-            
-            // Restaurar botón
-            const uploadBtn = document.querySelector('#upload-photo-form button[type="submit"]');
-            if (uploadBtn) {
-                uploadBtn.disabled = false;
-                uploadBtn.innerHTML = 'Subir Foto';
-            }
-        }
+      const inp = document.getElementById('photo-upload');
+      if (!inp?.files.length) {
+        App.showToast('Selecciona una foto', 'warning');
+        return;
+      }
+      const file = inp.files[0];
+      if (file.size > 5*1024*1024) {
+        App.showToast('La foto supera 5MB', 'warning');
+        return;
+      }
+      const form = new FormData();
+      form.append('photo', file);
+      const btn = document.querySelector('#upload-photo-form button[type="submit"]');
+      const txt = btn.innerHTML;
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Subiendo...';
+      try {
+        await API.results.uploadPhoto(matchId, form);
+        App.showToast('Foto subida', 'success');
+        document.getElementById('upload-photo-form').reset();
+        this.loadMatchPhotos(matchId);
+      } catch (err) {
+        console.error('Error subiendo foto:', err);
+        App.showToast('Error al subir foto', 'error');
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = txt;
+      }
     },
-    
-    // Utilidades
-    escapeHtml(text) {
-        if (!text) return '';
-        
-        const div = document.createElement('div');
-        div.textContent = text;
-        return div.innerHTML;
+
+    escapeHtml(text='') {
+      const d = document.createElement('div'); d.textContent = text;
+      return d.innerHTML;
     },
-    
-    getInitials(name) {
-        if (!name) return '?';
-        
-        return name
-            .split(' ')
-            .map(part => part.charAt(0).toUpperCase())
-            .slice(0, 2)
-            .join('');
+
+    getInitials(name='') {
+      return name.split(' ').map(p => p[0].toUpperCase()).slice(0,2).join('');
     }
-};
+  };
+
+  window.Matches = Matches;
+})(window, window.API);

@@ -8,15 +8,18 @@ class Match(db.Model):
     league_id = db.Column(db.Integer, db.ForeignKey('leagues.id'), nullable=False)
     date = db.Column(db.DateTime, nullable=False)
     status = db.Column(db.String(20), default='open', nullable=False)  # open, in_progress, completed, cancelled
-    winner_team = db.Column(db.Integer, nullable=True)  # 1 or 2, null if no result yet
+    winner_team = db.Column(db.Integer, nullable=True)  # 1 o 2, null si no hay resultado
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     created_by_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
 
-    # Relationships
+    # Relaciones
     league = db.relationship('League', back_populates='matches')
     created_by = db.relationship('User', backref='created_matches')
     participations = db.relationship(
         'MatchParticipation', back_populates='match', cascade='all, delete-orphan'
+    )
+    card_assignments = db.relationship(
+        'CardAssignment', back_populates='match', cascade='all, delete-orphan'
     )
     ratings = db.relationship(
         'PlayerRating', back_populates='match', cascade='all, delete-orphan'
@@ -44,15 +47,14 @@ class MatchParticipation(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     match_id = db.Column(db.Integer, db.ForeignKey('matches.id'), nullable=False)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
-    team = db.Column(db.Integer, nullable=False)  # 1 or 2
+    team = db.Column(db.Integer, nullable=False)  # 1 o 2
     joined_at = db.Column(db.DateTime, default=datetime.utcnow)
 
-    # Relationships
+    # Relaciones
     match = db.relationship('Match', back_populates='participations')
     user = db.relationship('User', back_populates='match_participations')
     card_assignment = db.relationship(
-        'CardAssignment', back_populates='participation', uselist=False,
-        cascade='all, delete-orphan'
+        'CardAssignment', back_populates='participation', uselist=False, cascade='all, delete-orphan'
     )
 
     __table_args__ = (
@@ -80,7 +82,7 @@ class CardAssignment(db.Model):
     used = db.Column(db.Boolean, default=False)
     used_at = db.Column(db.DateTime, nullable=True)
 
-    # Relationships
+    # Relaciones
     match = db.relationship('Match', back_populates='card_assignments')
     participation = db.relationship('MatchParticipation', back_populates='card_assignment')
     card = db.relationship('Card', back_populates='assignments')

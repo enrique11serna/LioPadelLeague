@@ -2,8 +2,8 @@ import random
 from flask import Blueprint, request, jsonify, g
 from datetime import datetime, timedelta
 from src.models import db
-from src.models.match import Match, MatchParticipation
-from src.models.card import Card, CardAssignment
+from src.models.match import Match, MatchParticipation, CardAssignment
+from src.models.card import Card
 from src.models.league import LeagueMembership
 from src.routes.auth import token_required
 

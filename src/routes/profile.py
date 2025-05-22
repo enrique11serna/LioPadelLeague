@@ -1,10 +1,7 @@
-# src/routes/profile.py
-
 from flask import Blueprint, jsonify, g
 from src.routes.auth import token_required
-from src.models.match import MatchParticipation, Match
+from src.models.match import MatchParticipation, Match, CardAssignment
 from src.models.rating import PlayerRating
-from src.models.card import CardAssignment
 
 profile_bp = Blueprint('profile', __name__)
 

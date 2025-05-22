@@ -40,7 +40,7 @@ def create_league():
 
     # Crear liga
     invite_code = League.generate_invite_code()
-    league = League(name=name, invite_code=invite_code, is_private=True)
+    league = League(name=name, invite_code=invite_code)
     league.created_by_id = user.id if hasattr(league, 'created_by_id') else None
     db.session.add(league)
     db.session.commit()
